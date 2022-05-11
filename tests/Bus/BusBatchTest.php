@@ -119,7 +119,7 @@ class BusBatchTest extends TestCase
 
     public function test_jobs_can_be_added_to_pending_batch()
     {
-        $batch = new PendingBatch(new Container, collect());
+        $batch = new PendingBatch(collect());
         $this->assertCount(0, $batch->jobs);
 
         $job = new class
@@ -141,7 +141,7 @@ class BusBatchTest extends TestCase
 
     public function test_jobs_can_be_added_to_the_pending_batch_from_iterable()
     {
-        $batch = new PendingBatch(new Container, collect());
+        $batch = new PendingBatch(collect());
         $this->assertCount(0, $batch->jobs);
 
         $count = 3;
@@ -389,7 +389,7 @@ class BusBatchTest extends TestCase
 
     public function test_options_serialization_on_postgres()
     {
-        $pendingBatch = (new PendingBatch(new Container, collect()))
+        $pendingBatch = (new PendingBatch(collect()))
             ->onQueue('test-queue');
 
         $connection = m::spy(PostgresConnection::class);
@@ -457,7 +457,7 @@ class BusBatchTest extends TestCase
     {
         $repository = new DatabaseBatchRepository(new BatchFactory($queue), DB::connection(), 'job_batches');
 
-        $pendingBatch = (new PendingBatch(new Container, collect()))
+        $pendingBatch = (new PendingBatch(collect()))
                             ->then(function (Batch $batch) {
                                 $_SERVER['__then.batch'] = $batch;
                                 $_SERVER['__then.count']++;

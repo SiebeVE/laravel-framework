@@ -35,7 +35,7 @@ class BusPendingBatchTest extends TestCase
             use Batchable;
         };
 
-        $pendingBatch = new PendingBatch($container, new Collection([$job]));
+        $pendingBatch = new PendingBatch(new Collection([$job]));
 
         $pendingBatch = $pendingBatch->then(function () {
             //
@@ -55,6 +55,7 @@ class BusPendingBatchTest extends TestCase
         $batch->shouldReceive('add')->once()->with(m::type(Collection::class))->andReturn($batch = m::mock(Batch::class));
 
         $container->instance(BatchRepository::class, $repository);
+        Container::setInstance($container);
 
         $pendingBatch->dispatch();
     }
@@ -69,7 +70,7 @@ class BusPendingBatchTest extends TestCase
         {
         };
 
-        $pendingBatch = new PendingBatch($container, new Collection([$job]));
+        $pendingBatch = new PendingBatch(new Collection([$job]));
 
         $repository = m::mock(BatchRepository::class);
 
@@ -84,6 +85,7 @@ class BusPendingBatchTest extends TestCase
         $repository->shouldReceive('delete')->once()->with('test-id');
 
         $container->instance(BatchRepository::class, $repository);
+        Container::setInstance($container);
 
         $pendingBatch->dispatch();
     }

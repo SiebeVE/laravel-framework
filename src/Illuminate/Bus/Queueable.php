@@ -248,16 +248,34 @@ trait Queueable
     public function dispatchNextJobInChain()
     {
         if (! empty($this->chained)) {
-            dispatch(tap(unserialize(array_shift($this->chained)), function ($next) {
-                $next->chained = $this->chained;
+            $job = unserialize(array_shift($this->chained));
+            if (!$job instanceof PendingBatch) {
+                $nextJob = $this->prepareNextJob($job);
+                dispatch($nextJob);
 
-                $next->onConnection($next->connection ?: $this->chainConnection);
-                $next->onQueue($next->queue ?: $this->chainQueue);
+                return;
+            }
 
-                $next->chainConnection = $this->chainConnection;
-                $next->chainQueue = $this->chainQueue;
-                $next->chainCatchCallbacks = $this->chainCatchCallbacks;
-            }));
+            if(! empty($this->chained)) {
+                $nextJob = unserialize(array_shift($this->chained));
+
+                $preparedNextJob = $nextJob;
+                if(!$nextJob instanceof PendingBatch) {
+                    $preparedNextJob = $this->prepareNextJob($preparedNextJob);
+                }
+
+                $job->then(
+                    static function() use ($preparedNextJob): void {
+                        if($preparedNextJob instanceof PendingBatch) {
+                            $preparedNextJob->dispatch();
+                            return;
+                        }
+
+                        dispatch($preparedNextJob);
+                    }
+                );
+            }
+            $job->dispatch();
         }
     }
 
@@ -271,6 +289,26 @@ trait Queueable
     {
         collect($this->chainCatchCallbacks)->each(function ($callback) use ($e) {
             $callback($e);
+        });
+    }
+
+    /**
+     * Enrich the next job with information from the current job
+     *
+     * @param  mixed  $job
+     * @return mixed
+     */
+    private function prepareNextJob(mixed $job): mixed
+    {
+        return tap($job, function ($next) {
+            $next->chained = $this->chained;
+
+            $next->onConnection($next->connection ?: $this->chainConnection);
+            $next->onQueue($next->queue ?: $this->chainQueue);
+
+            $next->chainConnection = $this->chainConnection;
+            $next->chainQueue = $this->chainQueue;
+            $next->chainCatchCallbacks = $this->chainCatchCallbacks;
         });
     }
 }

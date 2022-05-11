@@ -4,7 +4,7 @@ namespace Illuminate\Bus;
 
 use Closure;
 use Illuminate\Bus\Events\BatchDispatched;
-use Illuminate\Contracts\Container\Container;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -13,13 +13,6 @@ use Throwable;
 
 class PendingBatch
 {
-    /**
-     * The IoC container instance.
-     *
-     * @var \Illuminate\Contracts\Container\Container
-     */
-    protected $container;
-
     /**
      * The batch name.
      *
@@ -44,13 +37,11 @@ class PendingBatch
     /**
      * Create a new pending batch instance.
      *
-     * @param  \Illuminate\Contracts\Container\Container  $container
      * @param  \Illuminate\Support\Collection  $jobs
      * @return void
      */
-    public function __construct(Container $container, Collection $jobs)
+    public function __construct(Collection $jobs)
     {
-        $this->container = $container;
         $this->jobs = $jobs;
     }
 
@@ -251,7 +242,7 @@ class PendingBatch
      */
     public function dispatch()
     {
-        $repository = $this->container->make(BatchRepository::class);
+        $repository = $this->container()->make(BatchRepository::class);
 
         try {
             $batch = $repository->store($this);
@@ -265,7 +256,7 @@ class PendingBatch
             throw $e;
         }
 
-        $this->container->make(EventDispatcher::class)->dispatch(
+        $this->container()->make(EventDispatcher::class)->dispatch(
             new BatchDispatched($batch)
         );
 
@@ -279,12 +270,12 @@ class PendingBatch
      */
     public function dispatchAfterResponse()
     {
-        $repository = $this->container->make(BatchRepository::class);
+        $repository = $this->container()->make(BatchRepository::class);
 
         $batch = $repository->store($this);
 
         if ($batch) {
-            $this->container->terminating(function () use ($batch) {
+            $this->container()->terminating(function () use ($batch) {
                 $this->dispatchExistingBatch($batch);
             });
         }
@@ -312,8 +303,18 @@ class PendingBatch
             throw $e;
         }
 
-        $this->container->make(EventDispatcher::class)->dispatch(
+        $this->container()->make(EventDispatcher::class)->dispatch(
             new BatchDispatched($batch)
         );
+    }
+
+    /**
+     * Get the container
+     *
+     * @return Container
+     */
+    private function container()
+    {
+        return Container::getInstance();
     }
 }
